@@ -28,9 +28,12 @@ namespace RUnit.Runner
 
                 var suiteInstance = Activator.CreateInstance(suite);
 
-                RunSetupMethods(setupMethods, suiteInstance);
+                RunTests(
+                    testMethods, 
+                    setupMethods, 
+                    teardownMethods,
+                    suiteInstance);
 
-                RunTests(testMethods, suiteInstance);
                 Console.WriteLine();
             }
         }
@@ -39,17 +42,18 @@ namespace RUnit.Runner
             var methods = suite.GetMethods().Where(m => m.GetCustomAttributes<T>().Count() > 0);
             return methods.ToArray();
         }
-        private static void RunSetupMethods<T>(MethodInfo[] methods, T runningSuite)
+        private static void RunMethods<T>(MethodInfo[] methods, T runningSuite)
         {
             foreach (var method in methods)
             {
                 method.Invoke(runningSuite, new object[] { });
             }
         }
-        private static void RunTests<T>(MethodInfo[] methods, T runningSuite)
+        private static void RunTests<T>(MethodInfo[] methods, MethodInfo[] setupMethods, MethodInfo[] teardownMethods, T runningSuite)
         {
             foreach (var test in methods)
             {
+                RunMethods(setupMethods, runningSuite);
                 var testAttribute = test.GetCustomAttribute<RTestAttribute>();
                 var expectsException = testAttribute.ExpectsException;
                 try
@@ -75,6 +79,7 @@ namespace RUnit.Runner
                         Console.WriteLine($"|* {test.Name} - FAILED");
                     }
                 }
+                RunMethods(teardownMethods, runningSuite);
             }
         }
     }
